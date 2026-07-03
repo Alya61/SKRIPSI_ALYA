@@ -9,10 +9,10 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Analisis K-Means Obat", layout="wide")
 
 st.title("📊 KLASTERISASI PERSEDIAAN OBAT")
-st.write("Aplikasi ini otomatis mengelompokkan obat menjadi kategori *Slow Moving*, *Medium Moving*, dan *Fast Moving*.")
+st.write("Analisis Klasterisasi Persediaan Obat Menggunakan Algoritma K-MEANS di Apotek Anugrah Bekasi")
 
 # --- PROSES UNGGAH FILE ---
-st.subheader("1. Unggah Data Penjualan")
+st.subheader("Unggah Data Penjualan")
 uploaded_file = st.file_uploader("Pilih file Excel (.xlsx) atau CSV data penjualan Anda", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
@@ -56,7 +56,7 @@ if uploaded_file is not None:
     data_agregasi['Kategori'] = data_agregasi['Cluster_ID'].map(mapping_kategori)
     
     # --- TAMPILAN 1: TOTAL DATA BERDASARKAN KARAKTERISTIK ---
-    st.subheader("2. Total Data Berdasarkan Karakteristik (Kategori)")
+    st.subheader("Total Data Berdasarkan Karakteristik (Kategori)")
     hitung_kategori = data_agregasi['Kategori'].value_counts().reindex(['Slow Moving', 'Medium Moving', 'Fast Moving']).fillna(0).astype(int)
     
     df_total = pd.DataFrame({
@@ -66,7 +66,7 @@ if uploaded_file is not None:
     st.dataframe(df_total, use_container_width=True)
     
     # --- TAMPILAN 2: VISUALISASI GRAFIK ---
-    st.subheader("3. Visualisasi Grafik Distribusi")
+    st.subheader("Visualisasi Grafik Distribusi")
     fig, ax = plt.subplots(figsize=(6, 3))
     kategori_urut = ['Slow Moving', 'Medium Moving', 'Fast Moving']
     jumlah_urut = [hitung_kategori.get(k, 0) for k in kategori_urut]
@@ -82,7 +82,7 @@ if uploaded_file is not None:
     st.pyplot(fig)
 
     # --- TAMPILAN 3: GROUPING DETAIL OBAT ---
-    st.subheader("4. Grouping Detail Obat Sesuai Kategori")
+    st.subheader("Grouping Detail Obat Sesuai Kategori")
     pilihan_kategori = st.selectbox("Pilih Kategori Obat untuk Dilihat di Web:", ['Slow Moving', 'Medium Moving', 'Fast Moving'])
     
     df_filtered = data_agregasi[data_agregasi['Kategori'] == pilihan_kategori][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
@@ -90,7 +90,7 @@ if uploaded_file is not None:
     st.dataframe(df_filtered, use_container_width=True)
 
     # --- PROSES PEMBENTUKAN STRUKTUR EXCEL SESUAI PERMINTAAN ---
-    st.subheader("5. Unduh Hasil Akhir")
+    st.subheader("Unduh Hasil Akhir")
     st.write("Unduh data hasil clustering yang sudah dikelompokkan berdasarkan kategori karakteristik obat beserta 3 variabelnya:")
 
     # Pecah data menjadi 3 kategori terpisah
