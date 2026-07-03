@@ -128,8 +128,6 @@ if uploaded_file is not None:
             workbook  = writer.book
             worksheet = writer.sheets['Grouping Karakteristik Obat']
             for i, col in enumerate(df_excel_final.columns):
-                       
-        excel_data = buffer.getvalue()
         
         st.download_button(
             label="📥 Download Tabel Karakteristik Obat (Excel)",
