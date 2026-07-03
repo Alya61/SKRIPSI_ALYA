@@ -81,56 +81,33 @@ if uploaded_file is not None:
         
     st.pyplot(fig)
 
-    # --- TAMPILAN 3: GROUPING DETAIL OBAT ---
-    st.subheader("Grouping Detail Obat Sesuai Kategori")
-    pilihan_kategori = st.selectbox("Pilih Kategori Obat untuk Dilihat di Web:", ['Slow Moving', 'Medium Moving', 'Fast Moving'])
-    
-    df_filtered = data_agregasi[data_agregasi['Kategori'] == pilihan_kategori][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
-    st.write(f"### Daftar Obat Berkategori: **{pilihan_kategori}** ({len(df_filtered)} obat)")
-    st.dataframe(df_filtered, use_container_width=True)
+  # --- PROSES PEMBENTUKAN STRUKTUR EXCEL ---
+        st.subheader("Unduh Hasil Akhir")
+        st.write("Unduh data hasil klasterisasi")
 
-    # --- PROSES PEMBENTUKAN STRUKTUR EXCEL SESUAI PERMINTAAN ---
-    st.subheader("Unduh Hasil Akhir")
-    st.write("Unduh data hasil clustering yang sudah dikelompokkan berdasarkan kategori karakteristik obat beserta 3 variabelnya:")
+        df_fast = data_agregasi[data_agregasi['Kategori'] == 'Fast Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
+        df_medium = data_agregasi[data_agregasi['Kategori'] == 'Medium Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
+        df_slow = data_agregasi[data_agregasi['Kategori'] == 'Slow Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
 
-    # Pecah data menjadi 3 kategori terpisah
-    df_fast = data_agregasi[data_agregasi['Kategori'] == 'Fast Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
-    df_medium = data_agregasi[data_agregasi['Kategori'] == 'Medium Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
-    df_slow = data_agregasi[data_agregasi['Kategori'] == 'Slow Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
+        df_fast.columns = ['[FAST] Nama Obat', '[FAST] Frekuensi', '[FAST] Volume', '[FAST] Nilai Transaksi']
+        df_medium.columns = ['[MEDIUM] Nama Obat', '[MEDIUM] Frekuensi', '[MEDIUM] Volume', '[MEDIUM] Nilai Transaksi']
+        df_slow.columns = ['[SLOW] Nama Obat', '[SLOW] Frekuensi', '[SLOW] Volume', '[SLOW] Nilai Transaksi']
 
-    # Berikan nama kolom baru yang mengindikasikan kategorinya agar jelas di Excel
-    df_fast.columns = ['[FAST] Nama Obat', '[FAST] Frekuensi', '[FAST] Volume', '[FAST] Nilai Transaksi']
-    df_medium.columns = ['[MEDIUM] Nama Obat', '[MEDIUM] Frekuensi', '[MEDIUM] Volume', '[MEDIUM] Nilai Transaksi']
-    df_slow.columns = ['[SLOW] Nama Obat', '[SLOW] Frekuensi', '[SLOW] Volume', '[SLOW] Nilai Transaksi']
+        df_excel_final = pd.concat([df_fast, df_medium, df_slow], axis=1)
 
-    # Gabungkan ketiga tabel secara horizontal (berjajar ke samping)
-    # Ini memastikan nama-nama obat menjadi isi dari masing-masing kategori kolomnya
-    df_excel_final = pd.concat([df_fast, df_medium, df_slow], axis=1)
+        with st.expander("Lihat Preview Struktur Tabel Excel yang Akan Diunduh"):
+            st.dataframe(df_excel_final.head(10))
 
-    # Preview struktur Excel yang akan di-download kepada user
-    with st.expander("Lihat Preview Struktur Tabel Excel yang Akan Diunduh"):
-        st.dataframe(df_excel_final.head(10))
-
-    # Membuat tombol download Excel menggunakan openpyxl/xlsxwriter via buffer memori
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df_excel_final.to_excel(writer, sheet_name='Grouping Karakteristik Obat', index=False)
+        # KODE BARU: Menggunakan openpyxl (Tanpa xlsxwriter)
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df_excel_final.to_excel(writer, sheet_name='Grouping Karakteristik Obat', index=False)
         
-        # Sesi perapian kolom otomatis di Excel (opsional agar tidak terpotong)
-        workbook  = writer.book
-        worksheet = writer.sheets['Grouping Karakteristik Obat']
-        for i, col in enumerate(df_excel_final.columns):
-            max_len = max(df_excel_final[col].astype(str).map(len).max(), len(col)) + 3
-            worksheet.set_column(i, i, max_len)
-    
-    excel_data = buffer.getvalue()
-    
-    st.download_button(
-        label="📥 Download Tabel Karakteristik Obat (Excel)",
-        data=excel_data,
-        file_name="Tabel_Karakteristik_Obat_KMeans.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-else:
-    st.info("💡 Silakan unggah file dataset terlebih dahulu pada menu di atas untuk memulai analisis.")
+        excel_data = buffer.getvalue()
+        
+        st.download_button(
+            label="📥 Download Hasil",
+            data=excel_data,
+            file_name="Hasil_klasterisasi",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
