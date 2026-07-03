@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 # Konfigurasi halaman utama
 st.set_page_config(page_title="Analisis K-Means Obat", layout="wide")
 
-st.title("📊 Aplikasi Clustering Penjualan Obat (K-Means)")
-st.write("Aplikasi ini otomatis mengelompokkan obat menjadi kategori *Slow Moving*, *Medium Moving*, dan *Fast Moving*.")
+st.title("📊 Klasterisasi Persediaan Obat")
+st.write("Analisis Klasterisasi Persediaan Obat Menggunakan Algoritma K-MEANS di Apotek Anugrah Bekasi.")
 
 # --- PROSES UNGGAH FILE ---
 st.subheader("1. Unggah Data Penjualan")
