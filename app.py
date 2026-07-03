@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import io  # <-- PASTIKAN BARIS INI ADA DI PALING ATAS
+import io
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 # Konfigurasi halaman utama
 st.set_page_config(page_title="Analisis K-Means Obat", layout="wide")
 
-st.title("📊 KLASTERISASI PERSEDIAAN OBAT")
-st.write("Analisis Klasterisasi Persediaan Obat Menggunakan Algoritma K-MEANS di Apotek Anugrah Bekasi")
+st.title("📊 Klasterisasi Persediaan Obat")
+st.write("Analisis KLasterisasi Persediaan Obat Menggunakan Algoritma K-MEANS di Apotek Anugrah Bekasi.")
 
 # --- PROSES UNGGAH FILE ---
 st.subheader("Unggah Data Penjualan")
@@ -23,91 +23,122 @@ if uploaded_file is not None:
         df = pd.read_excel(uploaded_file)
     
     st.success(f"✅ Berhasil memuat file: {uploaded_file.name}")
+    
+    # Membersihkan nama kolom dari spasi tidak sengaja
+    df.columns = df.columns.astype(str).str.strip()
 
-    # --- PROSES AGREGASI DATA ---
-    try:
-        data_agregasi = df.groupby('Nama Obat', sort=False).agg({
-            'Tanggal Transaksi': 'count',    
-            'Jumlah Terjual': 'sum',         
-            'Total Harga': 'sum'             
-        }).reset_index()
+    # --- MENYAMAKAN NAMA KOLOM SESUAI EXCEL USER ---
+    kolom_nama_obat = 'NAMA OBAT'
+    kolom_volume = 'PEMAKAIAN'
+    kolom_nilai = 'TOTAL'
 
-        data_agregasi.columns = ['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']
-    except KeyError as e:
-        st.error(f"Kolom tidak ditemukan! Pastikan file memiliki kolom 'Nama Obat', 'Tanggal Transaksi', 'Jumlah Terjual', dan 'Total Harga'.")
-        st.stop()
+    # Validasi keberadaan kolom
+    if kolom_nama_obat in df.columns and kolom_volume in df.columns and kolom_nilai in df.columns:
+        try:
+            # Karena data sudah berbentuk rekap bulanan per obat, kita langsung ambil kolomnya
+            # (Gunakan groupby jika ada nama obat yang double, untuk menjamin keunikan data)
+            data_agregasi = df.groupby(kolom_nama_obat, sort=False).agg({
+                kolom_volume: 'sum',         
+                kolom_nilai: 'sum'             
+            }).reset_index()
 
-    # --- PROSES NORMALISASI DAN K-MEANS ---
-    scaler = MinMaxScaler()
-    fitur = ['Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']
-    X_scaled = scaler.fit_transform(data_agregasi[fitur])
-    df_normalized = pd.DataFrame(X_scaled, columns=fitur)
-    
-    kmeans = KMeans(n_clusters=3, init='k-means++', random_state=42)
-    data_agregasi['Cluster_ID'] = kmeans.fit_predict(df_normalized)
-    
-    # --- PROSES PENAMAAN KATEGORI MOVING ---
-    cluster_means = data_agregasi.groupby('Cluster_ID')['Volume Penjualan'].mean().sort_values().index
-    mapping_kategori = {
-        cluster_means[0]: 'Slow Moving',
-        cluster_means[1]: 'Medium Moving',
-        cluster_means[2]: 'Fast Moving'
-    }
-    data_agregasi['Kategori'] = data_agregasi['Cluster_ID'].map(mapping_kategori)
-    
-    # --- TAMPILAN 1: TOTAL DATA BERDASARKAN KARAKTERISTIK ---
-    st.subheader("Total Data Berdasarkan Karakteristik (Kategori)")
-    hitung_kategori = data_agregasi['Kategori'].value_counts().reindex(['Slow Moving', 'Medium Moving', 'Fast Moving']).fillna(0).astype(int)
-    
-    df_total = pd.DataFrame({
-        'Karakteristik / Kategori': hitung_kategori.index,
-        'Total Jenis Obat': hitung_kategori.values
-    })
-    st.dataframe(df_total, use_container_width=True)
-    
-    # --- TAMPILAN 2: VISUALISASI GRAFIK ---
-    st.subheader("Visualisasi Grafik Distribusi")
-    fig, ax = plt.subplots(figsize=(6, 3))
-    kategori_urut = ['Slow Moving', 'Medium Moving', 'Fast Moving']
-    jumlah_urut = [hitung_kategori.get(k, 0) for k in kategori_urut]
-    
-    colors = ['#e74c3c', '#f39c12', '#2ecc71']
-    bars = ax.bar(kategori_urut, jumlah_urut, color=colors)
-    ax.set_ylabel('Jumlah Jenis Obat')
-    
-    for bar in bars:
-        yval = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2, yval + 0.1, yval, ha='center', va='bottom', fontweight='bold')
+            data_agregasi.columns = ['Nama Obat', 'Volume Penjualan', 'Nilai Transaksi']
+        except Exception as e:
+            st.error(f"Gagal memproses data. Error: {e}")
+            st.stop()
+            
+        # --- PROSES NORMALISASI DAN K-MEANS ---
+        scaler = MinMaxScaler()
+        fitur = ['Volume Penjualan', 'Nilai Transaksi']
+        X_scaled = scaler.fit_transform(data_agregasi[fitur])
+        df_normalized = pd.DataFrame(X_scaled, columns=fitur)
         
-    st.pyplot(fig)
+        kmeans = KMeans(n_clusters=3, init='k-means++', random_state=42)
+        data_agregasi['Cluster_ID'] = kmeans.fit_predict(df_normalized)
+        
+        # --- PROSES PENAMAAN KATEGORI MOVING ---
+        cluster_means = data_agregasi.groupby('Cluster_ID')['Volume Penjualan'].mean().sort_values().index
+        mapping_kategori = {
+            cluster_means[0]: 'Slow Moving',
+            cluster_means[1]: 'Medium Moving',
+            cluster_means[2]: 'Fast Moving'
+        }
+        data_agregasi['Kategori'] = data_agregasi['Cluster_ID'].map(mapping_kategori)
+        
+        # --- TAMPILAN 1: TOTAL DATA BERDASARKAN KARAKTERISTIK ---
+        st.subheader("Total Data Berdasarkan Karakteristik (Kategori)")
+        hitung_kategori = data_agregasi['Kategori'].value_counts().reindex(['Slow Moving', 'Medium Moving', 'Fast Moving']).fillna(0).astype(int)
+        
+        df_total = pd.DataFrame({
+            'Karakteristik / Kategori': hitung_kategori.index,
+            'Total Jenis Obat': hitung_kategori.values
+        })
+        st.dataframe(df_total, use_container_width=True)
+        
+        # --- TAMPILAN 2: VISUALISASI GRAFIK ---
+        st.subheader("Visualisasi Grafik Distribusi")
+        fig, ax = plt.subplots(figsize=(6, 3))
+        kategori_urut = ['Slow Moving', 'Medium Moving', 'Fast Moving']
+        jumlah_urut = [hitung_kategori.get(k, 0) for k in kategori_urut]
+        
+        colors = ['#e74c3c', '#f39c12', '#2ecc71']
+        bars = ax.bar(kategori_urut, jumlah_urut, color=colors)
+        ax.set_ylabel('Jumlah Jenis Obat')
+        
+        for bar in bars:
+            yval = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2, yval + 0.1, yval, ha='center', va='bottom', fontweight='bold')
+            
+        st.pyplot(fig)
 
-  # --- PROSES PEMBENTUKAN STRUKTUR EXCEL ---
+        # --- TAMPILAN 3: GROUPING DETAIL OBAT ---
+        st.subheader("Grouping Detail Obat Sesuai Kategori")
+        pilihan_kategori = st.selectbox("Pilih Kategori Obat untuk Dilihat di Web:", ['Slow Moving', 'Medium Moving', 'Fast Moving'])
+        
+        df_filtered = data_agregasi[data_agregasi['Kategori'] == pilihan_kategori][['Nama Obat', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
+        st.write(f"### Daftar Obat Berkategori: **{pilihan_kategori}** ({len(df_filtered)} obat)")
+        st.dataframe(df_filtered, use_container_width=True)
+
+        # --- PROSES PEMBENTUKAN STRUKTUR EXCEL ---
         st.subheader("Unduh Hasil Akhir")
-        st.write("Unduh data hasil klasterisasi")
+        st.write("Unduh data hasil clustering yang sudah dikelompokkan berdasarkan kategori karakteristik obat beserta variabelnya:")
 
-        df_fast = data_agregasi[data_agregasi['Kategori'] == 'Fast Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
-        df_medium = data_agregasi[data_agregasi['Kategori'] == 'Medium Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
-        df_slow = data_agregasi[data_agregasi['Kategori'] == 'Slow Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
+        df_fast = data_agregasi[data_agregasi['Kategori'] == 'Fast Moving'][['Nama Obat', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
+        df_medium = data_agregasi[data_agregasi['Kategori'] == 'Medium Moving'][['Nama Obat', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
+        df_slow = data_agregasi[data_agregasi['Kategori'] == 'Slow Moving'][['Nama Obat', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
 
-        df_fast.columns = ['[FAST] Nama Obat', '[FAST] Frekuensi', '[FAST] Volume', '[FAST] Nilai Transaksi']
-        df_medium.columns = ['[MEDIUM] Nama Obat', '[MEDIUM] Frekuensi', '[MEDIUM] Volume', '[MEDIUM] Nilai Transaksi']
-        df_slow.columns = ['[SLOW] Nama Obat', '[SLOW] Frekuensi', '[SLOW] Volume', '[SLOW] Nilai Transaksi']
+        df_fast.columns = ['[FAST] Nama Obat', '[FAST] Volume (Pemakaian)', '[FAST] Nilai Transaksi (Total)']
+        df_medium.columns = ['[MEDIUM] Nama Obat', '[MEDIUM] Volume (Pemakaian)', '[MEDIUM] Nilai Transaksi (Total)']
+        df_slow.columns = ['[SLOW] Nama Obat', '[SLOW] Volume (Pemakaian)', '[SLOW] Nilai Transaksi (Total)']
 
         df_excel_final = pd.concat([df_fast, df_medium, df_slow], axis=1)
 
         with st.expander("Lihat Preview Struktur Tabel Excel yang Akan Diunduh"):
             st.dataframe(df_excel_final.head(10))
 
-        # KODE BARU: Menggunakan openpyxl (Tanpa xlsxwriter)
         buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
             df_excel_final.to_excel(writer, sheet_name='Grouping Karakteristik Obat', index=False)
+            
+            workbook  = writer.book
+            worksheet = writer.sheets['Grouping Karakteristik Obat']
+            for i, col in enumerate(df_excel_final.columns):
+                val_lengths = df_excel_final[col].astype(str).map(len)
+                max_len = max(val_lengths.max() if not val_lengths.empty else 0, len(col)) + 3
+                worksheet.set_column(i, i, max_len)
         
         excel_data = buffer.getvalue()
         
         st.download_button(
-            label="📥 Download Hasil",
+            label="📥 Download Tabel Karakteristik Obat (Excel)",
             data=excel_data,
-            file_name="Hasil_klasterisasi",
+            file_name="Tabel_Karakteristik_Obat_KMeans.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+    else:
+        st.error("❌ Nama kolom di Excel tidak sesuai!")
+        st.write("Pastikan file Excel memiliki kolom bernama: **'NAMA OBAT'**, **'PEMAKAIAN'**, dan **'TOTAL'**.")
+        st.warning(f"Kolom yang terdeteksi saat ini: {list(df.columns)}")
+
+else:
+    st.info("💡 Silakan unggah file dataset terlebih dahulu pada menu di atas untuk memulai analisis.")
