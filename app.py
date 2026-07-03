@@ -24,7 +24,7 @@ if uploaded_file is not None:
     
     st.success(f"✅ Berhasil memuat file: {uploaded_file.name}")
     
-    # Membersihkan nama kolom dari spasi tidak sengaja di awal/akhir (misal 'Nama Obat ' -> 'Nama Obat')
+    # Membersihkan nama kolom dari spasi tidak sengaja di awal/akhir
     df.columns = df.columns.astype(str).str.strip()
 
     # --- PROSES AGREGASI DATA ---
@@ -34,7 +34,7 @@ if uploaded_file is not None:
     kolom_terjual = 'Jumlah Terjual'
     kolom_total_harga = 'Total Harga'
 
-    # Validasi apakah kolom-kolom di atas ada di file excel yang diupload
+    # Validasi apakah kolom-kolom di atas ada di file yang diupload
     fitur_ada = [kolom_nama_obat in df.columns, kolom_tanggal in df.columns, kolom_terjual in df.columns, kolom_total_harga in df.columns]
     
     if all(fitur_ada):
@@ -104,16 +104,16 @@ if uploaded_file is not None:
 
         # --- PROSES PEMBENTUKAN STRUKTUR EXCEL ---
         st.subheader("5. Unduh Hasil Akhir")
-        st.write("Unduh data hasil clustering yang sudah dikelompokkan berdasarkan kategori karakteristik obat beserta 3 variabelnya:")
+        st.write("Unduh data hasil clustering yang sudah dikelompokkan berdasarkan kategori karakteristik obat:")
 
         df_fast = data_agregasi[data_agregasi['Kategori'] == 'Fast Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
         df_medium = data_agregasi[data_agregasi['Kategori'] == 'Medium Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
         df_slow = data_agregasi[data_agregasi['Kategori'] == 'Slow Moving'][['Nama Obat', 'Frekuensi Transaksi', 'Volume Penjualan', 'Nilai Transaksi']].reset_index(drop=True)
 
-        # FIX UTAMA: Jika ada kategori yang kosong, diisi dataframe kosong berkolom agar concat tidak error/kosong kolom
-        df_fast.columns = ['[FAST] Nama Obat', '[FAST] Frekuensi', '[FAST] Volume', '[FAST] Nilai Transaksi'] if not df_fast.empty else ['[FAST] Nama Obat', '[FAST] Frekuensi', '[FAST] Volume', '[FAST] Nilai Transaksi']
-        df_medium.columns = ['[MEDIUM] Nama Obat', '[MEDIUM] Frekuensi', '[MEDIUM] Volume', '[MEDIUM] Nilai Transaksi'] if not df_medium.empty else ['[MEDIUM] Nama Obat', '[MEDIUM] Frekuensi', '[MEDIUM] Volume', '[MEDIUM] Nilai Transaksi']
-        df_slow.columns = ['[SLOW] Nama Obat', '[SLOW] Frekuensi', '[SLOW] Volume', '[SLOW] Nilai Transaksi'] if not df_slow.empty else ['[SLOW] Nama Obat', '[SLOW] Frekuensi', '[SLOW] Volume', '[SLOW] Nilai Transaksi']
+        # Penamaan kolom horizontal
+        df_fast.columns = ['[FAST] Nama Obat', '[FAST] Frekuensi', '[FAST] Volume', '[FAST] Nilai Transaksi']
+        df_medium.columns = ['[MEDIUM] Nama Obat', '[MEDIUM] Frekuensi', '[MEDIUM] Volume', '[MEDIUM] Nilai Transaksi']
+        df_slow.columns = ['[SLOW] Nama Obat', '[SLOW] Frekuensi', '[SLOW] Volume', '[SLOW] Nilai Transaksi']
 
         # Gabungkan secara horizontal
         df_excel_final = pd.concat([df_fast, df_medium, df_slow], axis=1)
@@ -121,14 +121,13 @@ if uploaded_file is not None:
         with st.expander("Lihat Preview Struktur Tabel Excel yang Akan Diunduh"):
             st.dataframe(df_excel_final.head(10))
 
+        # Proses penyimpanan ke buffer memory untuk didownload
         buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df_excel_final.to_excel(writer, sheet_name='Grouping Karakteristik Obat', index=False)
-            
-            workbook  = writer.book
-            worksheet = writer.sheets['Grouping Karakteristik Obat']
-            for i, col in enumerate(df_excel_final.columns):
         
+        excel_data = buffer.getvalue()
+
         st.download_button(
             label="📥 Download Tabel Karakteristik Obat (Excel)",
             data=excel_data,
