@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 # Konfigurasi halaman utama
 st.set_page_config(page_title="Analisis K-Means Obat", layout="wide")
 
-st.title("📊 Klasterisasi Persediaan Obat")
-st.write("Analisis KLasterisasi Persediaan Obat Menggunakan Algoritma K-MEANS di Apotek Anugrah Bekasi.")
+st.title("📊 KLasterisasi Persediaan Obat")
+st.write("Analisis KLasterisasi Persediaan Obat Menggunakan Algoritma K-MEANS di Apotek Anugrah Bekasi")
 
 # --- PROSES UNGGAH FILE ---
 st.subheader("Unggah Data Penjualan")
