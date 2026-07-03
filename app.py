@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import io
+import io  # <-- PASTIKAN BARIS INI ADA DI PALING ATAS
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
