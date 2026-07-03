@@ -128,11 +128,7 @@ if uploaded_file is not None:
             workbook  = writer.book
             worksheet = writer.sheets['Grouping Karakteristik Obat']
             for i, col in enumerate(df_excel_final.columns):
-                # Proteksi mutlak jika kolom kosong/NaN agar pencarian panjang karakter tidak crash
-                val_lengths = df_excel_final[i].astype(str).map(len) if isinstance(i, int) else df_excel_final[col].astype(str).map(len)
-                max_len = max(val_lengths.max() if not val_lengths.empty else 0, len(str(col))) + 3
-                worksheet.set_column(i, i, max_len)
-        
+                       
         excel_data = buffer.getvalue()
         
         st.download_button(
