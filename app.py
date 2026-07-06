@@ -5,9 +5,9 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 
-# =========================
+# ==================================================
 # KONFIGURASI HALAMAN
-# =========================
+# ==================================================
 
 st.set_page_config(
     page_title="Analisis K-Means Obat",
@@ -20,9 +20,9 @@ st.write(
     "di Apotek Anugrah Bekasi"
 )
 
-# =========================
+# ==================================================
 # UPLOAD FILE
-# =========================
+# ==================================================
 
 st.subheader("1. Unggah Data Penjualan")
 
@@ -33,9 +33,9 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
 
-    # =========================
-    # BACA FILE
-    # =========================
+    # ==================================================
+    # MEMBACA FILE
+    # ==================================================
 
     if uploaded_file.name.endswith(".csv"):
         df = pd.read_csv(uploaded_file)
@@ -46,10 +46,6 @@ if uploaded_file is not None:
 
     df.columns = df.columns.astype(str).str.strip()
 
-    # =========================
-    # VALIDASI KOLOM
-    # =========================
-
     required_cols = [
         'Nama Obat',
         'Tanggal Transaksi',
@@ -59,9 +55,9 @@ if uploaded_file is not None:
 
     if all(col in df.columns for col in required_cols):
 
-        # =========================
-        # AGREGASI DATA
-        # =========================
+        # ==================================================
+        # DATA AGREGASI
+        # ==================================================
 
         data_agregasi = df.groupby(
             'Nama Obat',
@@ -79,9 +75,9 @@ if uploaded_file is not None:
             'Nilai Transaksi'
         ]
 
-        # =========================
+        # ==================================================
         # RINGKASAN DATASET
-        # =========================
+        # ==================================================
 
         st.subheader("2. Ringkasan Dataset")
 
@@ -102,9 +98,9 @@ if uploaded_file is not None:
             int(df['Jumlah Terjual'].sum())
         )
 
-        # =========================
+        # ==================================================
         # NORMALISASI
-        # =========================
+        # ==================================================
 
         fitur = [
             'Frekuensi Transaksi',
@@ -118,9 +114,20 @@ if uploaded_file is not None:
             data_agregasi[fitur]
         )
 
-        # =========================
+        df_normalized = pd.DataFrame(
+            X_scaled,
+            columns=fitur
+        )
+
+        df_normalized.insert(
+            0,
+            'Nama Obat',
+            data_agregasi['Nama Obat'].values
+        )
+
+        # ==================================================
         # K-MEANS
-        # =========================
+        # ==================================================
 
         kmeans = KMeans(
             n_clusters=3,
@@ -128,53 +135,56 @@ if uploaded_file is not None:
             random_state=42
         )
 
-        data_agregasi['Cluster_ID'] = kmeans.fit_predict(
-            X_scaled
+        df_normalized['Cluster_ID'] = kmeans.fit_predict(
+            df_normalized[
+                [
+                    'Frekuensi Transaksi',
+                    'Volume Penjualan',
+                    'Nilai Transaksi'
+                ]
+            ]
         )
 
-        # =========================
-        # LABEL KATEGORI
-        # =========================
+        # ==================================================
+        # PENAMAAN CLUSTER
+        # SAMA PERSIS DENGAN COLAB
+        # ==================================================
 
-        cluster_means = (
-            data_agregasi
-            .groupby('Cluster_ID')['Volume Penjualan']
+        centroid = (
+            df_normalized
+            .groupby('Cluster_ID')
+            [
+                [
+                    'Frekuensi Transaksi',
+                    'Volume Penjualan',
+                    'Nilai Transaksi'
+                ]
+            ]
             .mean()
-            .sort_values()
+        )
+
+        urutan = (
+            centroid['Frekuensi Transaksi']
+            .sort_values(ascending=False)
             .index
         )
 
         mapping_kategori = {
-            cluster_means[0]: 'Slow Moving',
-            cluster_means[1]: 'Medium Moving',
-            cluster_means[2]: 'Fast Moving'
+            urutan[0]: 'Fast Moving',
+            urutan[1]: 'Medium Moving',
+            urutan[2]: 'Slow Moving'
         }
 
-        data_agregasi['Kategori'] = (
-            data_agregasi['Cluster_ID']
+        df_normalized['Kategori'] = (
+            df_normalized['Cluster_ID']
             .map(mapping_kategori)
         )
 
-        # =========================
-        # HASIL AKHIR
-        # =========================
+        hasil_akhir = df_normalized.copy()
 
-        hasil_akhir = data_agregasi.copy()
-
-        hasil_akhir = hasil_akhir[
-            [
-                'Nama Obat',
-                'Frekuensi Transaksi',
-                'Volume Penjualan',
-                'Nilai Transaksi',
-                'Cluster_ID',
-                'Kategori'
-            ]
-        ]
-
-        # =========================
+        # ==================================================
         # DISTRIBUSI CLUSTER
-        # =========================
+        # ==================================================
 
         st.subheader("3. Distribusi Hasil Clustering")
 
@@ -202,13 +212,13 @@ if uploaded_file is not None:
             use_container_width=True
         )
 
-        # =========================
-        # GRAFIK
-        # =========================
+        # ==================================================
+        # GRAFIK DISTRIBUSI
+        # ==================================================
 
         st.subheader("4. Grafik Distribusi Cluster")
 
-        fig, ax = plt.subplots(figsize=(7, 4))
+        fig, ax = plt.subplots(figsize=(8,4))
 
         kategori = [
             'Fast Moving',
@@ -217,41 +227,50 @@ if uploaded_file is not None:
         ]
 
         jumlah = [
-            hitung_kategori.get(k, 0)
+            hitung_kategori.get(k,0)
             for k in kategori
         ]
 
         bars = ax.bar(kategori, jumlah)
 
-        ax.set_ylabel("Jumlah Obat")
         ax.set_xlabel("Kategori")
+        ax.set_ylabel("Jumlah Obat")
 
         for bar in bars:
-            yval = bar.get_height()
+            y = bar.get_height()
+
             ax.text(
                 bar.get_x() + bar.get_width()/2,
-                yval,
-                int(yval),
+                y,
+                int(y),
                 ha='center'
             )
 
         st.pyplot(fig)
 
-        # =========================
-        # DATA LENGKAP
-        # =========================
+        # ==================================================
+        # DATA HASIL CLUSTERING
+        # ==================================================
 
-        st.subheader("5. Data Hasil Clustering Lengkap")
+        st.subheader("5. Data Hasil Clustering")
 
         st.dataframe(
-            hasil_akhir,
+            hasil_akhir[
+                [
+                    'Nama Obat',
+                    'Kategori',
+                    'Frekuensi Transaksi',
+                    'Volume Penjualan',
+                    'Nilai Transaksi'
+                ]
+            ],
             use_container_width=True,
             height=500
         )
 
-        # =========================
-        # FILTER KATEGORI
-        # =========================
+        # ==================================================
+        # FILTER
+        # ==================================================
 
         st.subheader("6. Filter Berdasarkan Kategori")
 
@@ -277,9 +296,9 @@ if uploaded_file is not None:
             use_container_width=True
         )
 
-        # =========================
+        # ==================================================
         # DOWNLOAD EXCEL
-        # =========================
+        # ==================================================
 
         st.subheader("7. Download Hasil Clustering")
 
@@ -292,7 +311,7 @@ if uploaded_file is not None:
 
             hasil_akhir.to_excel(
                 writer,
-                sheet_name='Semua Hasil',
+                sheet_name='Hasil Clustering',
                 index=False
             )
 
@@ -331,14 +350,22 @@ if uploaded_file is not None:
         )
 
     else:
+
         st.error(
-            "Kolom wajib tidak ditemukan. "
-            "Pastikan file memiliki kolom: "
-            "'Nama Obat', 'Tanggal Transaksi', "
-            "'Jumlah Terjual', dan 'Total Harga'."
+            "Kolom wajib tidak ditemukan.\n\n"
+            "Pastikan file memiliki kolom:\n"
+            "- Nama Obat\n"
+            "- Tanggal Transaksi\n"
+            "- Jumlah Terjual\n"
+            "- Total Harga"
         )
 
+        st.write("Kolom yang terdeteksi:")
+
+        st.warning(list(df.columns))
+
 else:
+
     st.info(
         "Silakan unggah file terlebih dahulu untuk memulai analisis."
     )
